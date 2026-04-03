@@ -191,7 +191,8 @@ class TestZedManager:
     def test_config_path_platform(self):
         with patch("platform.system", return_value="Darwin"):
             manager = ZedManager()
-            assert "Library/Application Support/Zed/settings.json" in manager.config_path
+            # Zed uses ~/.config/zed/settings.json on macOS
+            assert ".config/zed/settings.json" in manager.config_path
 
         with patch("platform.system", return_value="Linux"):
             manager = ZedManager()
@@ -218,7 +219,12 @@ class TestZedManager:
         with patch("shutil.which", return_value="/usr/local/bin/zed"):
             assert manager.is_client_installed()
         with patch("shutil.which", return_value=None):
-            assert not manager.is_client_installed()
+            # Falls back to settings.json check
+            with patch("os.path.exists", return_value=True):
+                assert manager.is_client_installed()
+        with patch("shutil.which", return_value=None):
+            with patch("os.path.exists", return_value=False):
+                assert not manager.is_client_installed()
 
 
 class TestCrushManager:
@@ -297,7 +303,12 @@ class TestCherryStudioManager:
         with patch("shutil.which", return_value="/usr/local/bin/cherry-studio"):
             assert manager.is_client_installed()
         with patch("shutil.which", return_value=None):
-            assert not manager.is_client_installed()
+            # Falls back to .app bundle check
+            with patch("os.path.exists", return_value=True):
+                assert manager.is_client_installed()
+        with patch("shutil.which", return_value=None):
+            with patch("os.path.exists", return_value=False):
+                assert not manager.is_client_installed()
 
 
 class TestNewClientsServerOperations:

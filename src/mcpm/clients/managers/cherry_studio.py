@@ -13,7 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class CherryStudioManager(JSONClientManager):
-    """Manages Cherry Studio MCP server configurations"""
+    """Manages Cherry Studio MCP server configurations.
+
+    Note: Cherry Studio does NOT use an external JSON config file for MCP servers.
+    MCP settings are stored internally in the app's database (via redux-persist).
+    There is no external config file to import/edit - all changes must be made
+    within the Cherry Studio application.
+    """
 
     # Client information
     client_key = "cherry-studio"
@@ -48,8 +54,13 @@ class CherryStudioManager(JSONClientManager):
         """Check if Cherry Studio is installed
 
         Returns:
-            bool: True if cherry-studio command is available, False otherwise
+            bool: True if Cherry Studio .app bundle exists, False otherwise
         """
+        # Check for .app bundle (macOS) or CLI binary
+        if self._system == "Darwin":
+            app_path = "/Applications/Cherry Studio.app"
+            if os.path.exists(app_path):
+                return True
         return shutil.which("cherry-studio") is not None
 
     def get_client_info(self) -> Dict[str, str]:
