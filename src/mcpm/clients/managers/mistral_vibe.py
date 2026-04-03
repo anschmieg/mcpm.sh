@@ -52,7 +52,15 @@ class MistralVibeManager(JSONClientManager):
             with open(self.config_path, "rb") as f:
                 config = tomli.load(f)
 
-            if self.configure_key_name not in config or not isinstance(config[self.configure_key_name], list):
+            if self.configure_key_name not in config:
+                config[self.configure_key_name] = []
+            elif not isinstance(config[self.configure_key_name], list):
+                logger.warning(
+                    "Unexpected type for '%s' in config file %s: expected list, got %s. Resetting to empty list.",
+                    self.configure_key_name,
+                    self.config_path,
+                    type(config[self.configure_key_name]).__name__,
+                )
                 config[self.configure_key_name] = []
 
             return config
@@ -78,6 +86,8 @@ class MistralVibeManager(JSONClientManager):
         result: Dict[str, Any] = {}
 
         for server in servers:
+            if not isinstance(server, dict):
+                continue
             name = server.get("name")
             if not name:
                 continue
