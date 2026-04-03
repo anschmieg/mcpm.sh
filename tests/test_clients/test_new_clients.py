@@ -27,6 +27,7 @@ def temp_json_config():
                     "args": ["-y", "@modelcontextprotocol/server-test"],
                 }
             }
+        }
         f.write(json.dumps(config).encode("utf-8"))
         temp_path = f.name
 
