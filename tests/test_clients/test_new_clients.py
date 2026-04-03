@@ -8,6 +8,7 @@ import tempfile
 from unittest.mock import patch
 
 import pytest
+import tomli
 
 from mcpm.clients.managers.cherry_studio import CherryStudioManager
 from mcpm.clients.managers.crush import CrushManager
@@ -34,6 +35,25 @@ def temp_json_config():
     os.unlink(temp_path)
 
 
+@pytest.fixture
+def temp_toml_config():
+    """Create a temporary TOML config file for Mistral Vibe testing"""
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
+        f.write(
+            b"""
+[[mcp_servers]]
+name = "test-server"
+transport = "stdio"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-test"]
+"""
+        )
+        temp_path = f.name
+
+    yield temp_path
+    os.unlink(temp_path)
+
+
 class TestMistralVibeManager:
     """Tests for MistralVibeManager"""
 
@@ -41,16 +61,16 @@ class TestMistralVibeManager:
         manager = MistralVibeManager()
         assert manager.client_key == "mistral-vibe"
         assert manager.display_name == "Mistral Vibe"
-        assert ".mistral/vibe/mcp.json" in manager.config_path
+        assert ".vibe/config.toml" in manager.config_path
 
-    def test_initialization_with_override(self, temp_json_config):
-        manager = MistralVibeManager(config_path_override=temp_json_config)
-        assert manager.config_path == temp_json_config
+    def test_initialization_with_override(self, temp_toml_config):
+        manager = MistralVibeManager(config_path_override=temp_toml_config)
+        assert manager.config_path == temp_toml_config
 
     def test_get_empty_config(self):
         manager = MistralVibeManager()
         config = manager._get_empty_config()
-        assert config == {"mcpServers": {}}
+        assert config == {"mcp_servers": []}
 
     def test_get_client_info(self):
         manager = MistralVibeManager()
@@ -83,20 +103,20 @@ class TestZedManager:
     def test_config_path_platform(self):
         with patch("platform.system", return_value="Darwin"):
             manager = ZedManager()
-            assert "Library/Application Support/Zed/mcp.json" in manager.config_path
+            assert "Library/Application Support/Zed/settings.json" in manager.config_path
 
         with patch("platform.system", return_value="Linux"):
             manager = ZedManager()
-            assert ".config/zed/mcp.json" in manager.config_path
+            assert ".config/zed/settings.json" in manager.config_path
 
         with patch("platform.system", return_value="Windows"):
             manager = ZedManager()
-            assert "Zed" in manager.config_path and "mcp.json" in manager.config_path
+            assert "Zed" in manager.config_path and "settings.json" in manager.config_path
 
     def test_get_empty_config(self):
         manager = ZedManager()
         config = manager._get_empty_config()
-        assert config == {"mcpServers": {}}
+        assert config == {"context_servers": {}}
 
     def test_get_client_info(self):
         manager = ZedManager()
@@ -195,8 +215,8 @@ class TestCherryStudioManager:
 class TestNewClientsServerOperations:
     """Test server operations for all new clients"""
 
-    def test_mistral_vibe_server_operations(self, temp_json_config):
-        manager = MistralVibeManager(config_path_override=temp_json_config)
+    def test_mistral_vibe_server_operations(self, temp_toml_config):
+        manager = MistralVibeManager(config_path_override=temp_toml_config)
 
         # Test list servers
         servers = manager.list_servers()
@@ -208,6 +228,19 @@ class TestNewClientsServerOperations:
         assert server.name == "test-server"
 
     def test_zed_server_operations(self, temp_json_config):
+        with open(temp_json_config, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "context_servers": {
+                        "test-server": {
+                            "command": "npx",
+                            "args": ["-y", "@modelcontextprotocol/server-test"],
+                        }
+                    }
+                },
+                f,
+            )
+
         manager = ZedManager(config_path_override=temp_json_config)
 
         servers = manager.list_servers()
@@ -237,9 +270,9 @@ class TestNewClientsServerOperations:
         assert server is not None
         assert server.name == "test-server"
 
-    def test_add_and_remove_server(self, temp_json_config):
+    def test_add_and_remove_server(self, temp_toml_config):
         """Test adding and removing servers"""
-        manager = MistralVibeManager(config_path_override=temp_json_config)
+        manager = MistralVibeManager(config_path_override=temp_toml_config)
 
         from mcpm.core.schema import STDIOServerConfig
 
@@ -265,3 +298,8 @@ class TestNewClientsServerOperations:
         # Verify server was removed
         server = manager.get_server("new-server")
         assert server is None
+
+        # Ensure persisted in TOML list format
+        with open(temp_toml_config, "rb") as f:
+            config = tomli.load(f)
+        assert isinstance(config.get("mcp_servers"), list)

@@ -19,6 +19,7 @@ class ZedManager(JSONClientManager):
     client_key = "zed"
     display_name = "Zed Editor"
     download_url = "https://zed.dev/"
+    configure_key_name = "context_servers"
 
     def __init__(self, config_path_override: str | None = None):
         """Initialize the Zed Editor client manager
@@ -33,16 +34,16 @@ class ZedManager(JSONClientManager):
         else:
             # Set config path based on detected platform
             if self._system == "Windows":
-                self.config_path = os.path.join(os.environ.get("APPDATA", ""), "Zed", "mcp.json")
+                self.config_path = os.path.join(os.environ.get("APPDATA", ""), "Zed", "settings.json")
             elif self._system == "Darwin":
-                self.config_path = os.path.expanduser("~/Library/Application Support/Zed/mcp.json")
+                self.config_path = os.path.expanduser("~/Library/Application Support/Zed/settings.json")
             else:
                 # Linux
-                self.config_path = os.path.expanduser("~/.config/zed/mcp.json")
+                self.config_path = os.path.expanduser("~/.config/zed/settings.json")
 
     def _get_empty_config(self) -> Dict[str, Any]:
         """Get empty config structure for Zed Editor"""
-        return {"mcpServers": {}}
+        return {self.configure_key_name: {}}
 
     def is_client_installed(self) -> bool:
         """Check if Zed Editor is installed
