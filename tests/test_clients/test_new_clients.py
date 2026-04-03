@@ -1,5 +1,5 @@
 """
-Tests for new client adapters: Mistral Vibe, Zed, Crush, Cherry Studio
+Tests for new client adapters: Mistral Vibe, Zed, Crush
 """
 
 import json
@@ -10,7 +10,6 @@ from unittest.mock import patch
 import pytest
 import tomli
 
-from mcpm.clients.managers.cherry_studio import CherryStudioManager
 from mcpm.clients.managers.crush import CrushManager
 from mcpm.clients.managers.mistral_vibe import MistralVibeManager
 from mcpm.clients.managers.zed import ZedManager
@@ -28,7 +27,6 @@ def temp_json_config():
                     "args": ["-y", "@modelcontextprotocol/server-test"],
                 }
             }
-        }
         f.write(json.dumps(config).encode("utf-8"))
         temp_path = f.name
 
@@ -94,7 +92,6 @@ class TestMistralVibeLoadConfigEdgeCases:
 
     def test_load_config_missing_file(self, temp_toml_config):
         """Missing config file should return empty config and allow subsequent operations."""
-        # Use a path that definitely doesn't exist
         import uuid
         non_existent_path = f"/tmp/mcpm_test_missing_{uuid.uuid4()}.toml"
         manager = MistralVibeManager(config_path_override=non_existent_path)
@@ -261,56 +258,6 @@ class TestCrushManager:
             assert not manager.is_client_installed()
 
 
-class TestCherryStudioManager:
-    """Tests for CherryStudioManager"""
-
-    def test_initialization(self):
-        manager = CherryStudioManager()
-        assert manager.client_key == "cherry-studio"
-        assert manager.display_name == "Cherry Studio"
-
-    def test_initialization_with_override(self, temp_json_config):
-        manager = CherryStudioManager(config_path_override=temp_json_config)
-        assert manager.config_path == temp_json_config
-
-    def test_config_path_platform(self):
-        with patch("platform.system", return_value="Darwin"):
-            manager = CherryStudioManager()
-            assert "Library/Application Support/cherry-studio/mcp.json" in manager.config_path
-
-        with patch("platform.system", return_value="Linux"):
-            manager = CherryStudioManager()
-            assert ".config/cherry-studio/mcp.json" in manager.config_path
-
-        with patch("platform.system", return_value="Windows"):
-            manager = CherryStudioManager()
-            assert "cherry-studio" in manager.config_path and "mcp.json" in manager.config_path
-
-    def test_get_empty_config(self):
-        manager = CherryStudioManager()
-        config = manager._get_empty_config()
-        assert config == {"mcpServers": {}}
-
-    def test_get_client_info(self):
-        manager = CherryStudioManager()
-        info = manager.get_client_info()
-        assert info["name"] == "Cherry Studio"
-        assert "download_url" in info
-        assert "config_file" in info
-
-    def test_is_client_installed(self):
-        manager = CherryStudioManager()
-        with patch("shutil.which", return_value="/usr/local/bin/cherry-studio"):
-            assert manager.is_client_installed()
-        with patch("shutil.which", return_value=None):
-            # Falls back to .app bundle check
-            with patch("os.path.exists", return_value=True):
-                assert manager.is_client_installed()
-        with patch("shutil.which", return_value=None):
-            with patch("os.path.exists", return_value=False):
-                assert not manager.is_client_installed()
-
-
 class TestNewClientsServerOperations:
     """Test server operations for all new clients"""
 
@@ -418,43 +365,6 @@ class TestNewClientsServerOperations:
         # Remove server
         assert manager.remove_server("crush-new-server")
         assert manager.get_server("crush-new-server") is None
-
-    def test_cherry_studio_server_operations(self, temp_json_config):
-        manager = CherryStudioManager(config_path_override=temp_json_config)
-
-        servers = manager.list_servers()
-        assert "test-server" in servers
-
-        server = manager.get_server("test-server")
-        assert server is not None
-        assert server.name == "test-server"
-
-    def test_cherry_studio_add_and_remove_server(self, temp_json_config):
-        """Test add/update/remove for Cherry Studio with mcpServers key."""
-        manager = CherryStudioManager(config_path_override=temp_json_config)
-
-        new_server = STDIOServerConfig(
-            name="cherry-new-server",
-            command="npx",
-            args=["-y", "@modelcontextprotocol/server-filesystem"],
-        )
-
-        # Add server
-        assert manager.add_server(new_server)
-
-        # Verify written to mcpServers
-        with open(temp_json_config, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        assert "cherry-new-server" in data[manager.configure_key_name]
-
-        # Verify round-trip
-        server = manager.get_server("cherry-new-server")
-        assert server is not None
-        assert server.name == "cherry-new-server"
-
-        # Remove server
-        assert manager.remove_server("cherry-new-server")
-        assert manager.get_server("cherry-new-server") is None
 
     def test_add_and_remove_server(self, temp_toml_config):
         """Test adding and removing servers"""

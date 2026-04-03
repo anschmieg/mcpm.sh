@@ -10,7 +10,7 @@ from mcpm.clients.base import BaseClientManager
 from mcpm.clients.client_config import ClientConfigManager
 
 # Import all client managers
-from mcpm.clients.managers.cherry_studio import CherryStudioManager
+
 from mcpm.clients.managers.claude_code import ClaudeCodeManager
 from mcpm.clients.managers.claude_desktop import ClaudeDesktopManager
 from mcpm.clients.managers.cline import ClineManager, RooCodeManager
@@ -59,7 +59,6 @@ class ClientRegistry:
         "mistral-vibe": MistralVibeManager,
         "zed": ZedManager,
         "crush": CrushManager,
-        "cherry-studio": CherryStudioManager,
     }
 
     @classmethod

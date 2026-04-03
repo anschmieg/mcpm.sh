@@ -4,7 +4,6 @@ Client manager implementations for various MCP clients
 This package contains specific implementations of client managers for MCP clients.
 """
 
-from mcpm.clients.managers.cherry_studio import CherryStudioManager
 from mcpm.clients.managers.claude_code import ClaudeCodeManager
 from mcpm.clients.managers.claude_desktop import ClaudeDesktopManager
 from mcpm.clients.managers.cline import ClineManager
@@ -39,5 +38,4 @@ __all__ = [
     "MistralVibeManager",
     "ZedManager",
     "CrushManager",
-    "CherryStudioManager",
 ]
